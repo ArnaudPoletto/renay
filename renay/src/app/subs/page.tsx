@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Plus } from "lucide-react";
+import { ChevronLeft, Plus, Users } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { subcontractor, projectAccess, project, subcontractorProject } from "@/db/schema";
@@ -59,7 +59,10 @@ export default async function SubsPage() {
         </CreateSubDialog>
       </header>
 
-      <main className="flex-1 px-4 md:px-6 py-6">
+      <main className="flex-1 px-4 md:px-6 py-6 flex flex-col gap-6">
+        <h1 className="flex items-center gap-2 text-xl font-semibold">
+          <Users className="size-5" /> Subcontractors
+        </h1>
         <SubsTable subs={subs} />
       </main>
     </>

@@ -1,11 +1,12 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, FolderOpen } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { db } from "@/db";
 import { project, projectAccess, subcontractor, subcontractorProject } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
+import { SubsSection } from "./subs-section";
 
 export default async function ProjectPage({
   params,
@@ -21,7 +22,7 @@ export default async function ProjectPage({
 
   if (!session) redirect("/login");
 
-  const [[row], subs] = await Promise.all([
+  const [[row], assignedSubs, allSubs] = await Promise.all([
     db
       .select({ id: project.id, name: project.name })
       .from(project)
@@ -38,9 +39,15 @@ export default async function ProjectPage({
       .from(subcontractorProject)
       .innerJoin(subcontractor, eq(subcontractor.id, subcontractorProject.subcontractorId))
       .where(eq(subcontractorProject.projectId, projectId)),
+    db
+      .select({ id: subcontractor.id, name: subcontractor.name })
+      .from(subcontractor),
   ]);
 
   if (!row) notFound();
+
+  const assignedIds = new Set(assignedSubs.map((s) => s.id));
+  const availableSubs = allSubs.filter((s) => !assignedIds.has(s.id));
 
   return (
     <>
@@ -54,31 +61,15 @@ export default async function ProjectPage({
       </header>
 
       <main className="flex-1 px-4 md:px-6 py-6 flex flex-col gap-6">
-        <h1 className="text-xl font-semibold">{row.name}</h1>
+        <h1 className="flex items-center gap-2 text-xl font-semibold">
+          <FolderOpen className="size-5" /> {row.name}
+        </h1>
 
-        <section className="rounded-xl border bg-background">
-          <div className="px-4 md:px-5 py-3 md:py-4 border-b">
-            <h2 className="font-semibold text-sm">Subs</h2>
-          </div>
-          {subs.length > 0 ? (
-            <ul className="divide-y">
-              {subs.map((s) => (
-                <li key={s.id}>
-                  <Link
-                    href={`/subs/${s.id}`}
-                    className="flex items-center px-4 md:px-5 py-3 md:py-3.5 text-sm hover:bg-muted/50 transition-colors"
-                  >
-                    {s.name}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="px-4 md:px-5 py-6 text-sm text-muted-foreground text-center">
-              No subs assigned
-            </p>
-          )}
-        </section>
+        <SubsSection
+          projectId={projectId}
+          assigned={assignedSubs}
+          available={availableSubs}
+        />
       </main>
     </>
   );

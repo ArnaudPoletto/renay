@@ -1,0 +1,1 @@
+ALTER TABLE "avsDocument" DROP COLUMN "isCurrent";

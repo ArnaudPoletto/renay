@@ -1,4 +1,4 @@
-import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, date, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -72,6 +72,18 @@ export const subcontractor = pgTable("subcontractor", {
   name: text("name").notNull(),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
   updatedAt: timestamp("updatedAt").notNull().defaultNow(),
+});
+
+export const avsDocument = pgTable("avsDocument", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  subcontractorId: uuid("subcontractorId")
+    .notNull()
+    .references(() => subcontractor.id, { onDelete: "cascade" }),
+  fileKey: text("fileKey"),
+  validFrom: date("validFrom"),
+  validUntil: date("validUntil"),
+  validityStatus: text("validityStatus"),
+  createdAt: timestamp("createdAt").notNull().defaultNow(),
 });
 
 export const subcontractorProject = pgTable("subcontractorProject", {
