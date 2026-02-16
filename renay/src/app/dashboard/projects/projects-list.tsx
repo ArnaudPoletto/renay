@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { ChevronRight, Search, Trash2 } from "lucide-react";
+import { ChevronRight, FolderOpen, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import Fuse from "fuse.js";
 import { Input } from "@/components/ui/input";
@@ -14,7 +14,7 @@ import {
 import { project } from "@/db/schema";
 import { deleteProject } from "./actions";
 
-type Project = Pick<typeof project.$inferSelect, "id" | "name">;
+type Project = Pick<typeof project.$inferSelect, "id" | "name"> & { totalSubs: number; compliantSubs: number };
 
 export function ProjectsList({ projects }: { projects: Project[] }) {
   const [query, setQuery] = useState("");
@@ -32,7 +32,7 @@ export function ProjectsList({ projects }: { projects: Project[] }) {
   return (
     <div className="rounded-xl border bg-background flex flex-col">
       <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b">
-        <h2 className="font-semibold text-sm">Projects</h2>
+        <h2 className="font-semibold text-sm flex items-center gap-1.5"><FolderOpen className="size-3.5" /> Projects</h2>
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
@@ -78,7 +78,16 @@ export function ProjectsList({ projects }: { projects: Project[] }) {
                     clearTimeout(Number(e.currentTarget.dataset.longPressTimer));
                   }}
                 >
-                  <p className="text-sm font-medium">{p.name}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{p.name}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {p.totalSubs === 0
+                        ? "No subs yet"
+                        : p.compliantSubs === p.totalSubs
+                        ? `All ${p.totalSubs} subs compliant`
+                        : `${p.compliantSubs}/${p.totalSubs} compliant subs`}
+                    </p>
+                  </div>
                   <ChevronRight className="size-4 text-muted-foreground shrink-0" />
                 </Link>
               </ContextMenuTrigger>

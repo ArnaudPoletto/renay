@@ -1,0 +1,1 @@
+ALTER TABLE "avsDocument" ADD COLUMN "description" text;

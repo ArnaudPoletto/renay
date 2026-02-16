@@ -38,7 +38,7 @@ export default async function SubPage({
       .select({ id: project.id, name: project.name })
       .from(project),
     db
-      .select({ id: avsDocument.id, fileKey: avsDocument.fileKey, validFrom: avsDocument.validFrom, validUntil: avsDocument.validUntil, validityStatus: avsDocument.validityStatus, createdAt: avsDocument.createdAt })
+      .select({ id: avsDocument.id, fileKey: avsDocument.fileKey, description: avsDocument.description, validFrom: avsDocument.validFrom, validUntil: avsDocument.validUntil, validityStatus: avsDocument.validityStatus, archivedAt: avsDocument.archivedAt, createdAt: avsDocument.createdAt })
       .from(avsDocument)
       .where(eq(avsDocument.subcontractorId, subId))
       .orderBy(desc(avsDocument.validUntil), desc(avsDocument.createdAt)),

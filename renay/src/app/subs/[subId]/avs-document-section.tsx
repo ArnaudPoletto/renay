@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition, useRef, useState } from "react";
-import { Plus, Trash2, CheckCircle2, CircleDashed, Clock, XCircle, Eye, Loader2, Pencil, Paperclip, X } from "lucide-react";
+import { Plus, Trash2, CheckCircle2, CircleDashed, Clock, XCircle, Eye, Loader2, Pencil, Paperclip, X, Archive, ArchiveRestore, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -10,15 +10,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { addAvsDocument, deleteAvsDocument, updateAvsDocumentDates } from "../avs-actions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { addAvsDocument, deleteAvsDocument, toggleArchiveAvsDocument, updateAvsDocumentDates } from "../avs-actions";
 import { Label } from "@/components/ui/label";
 
 type AvsDoc = {
   id: string;
   fileKey: string | null;
+  description: string | null;
   validFrom: string | null;
   validUntil: string | null;
   validityStatus: string | null;
+  archivedAt: Date | null;
   createdAt: Date;
 };
 
@@ -41,18 +50,17 @@ function AvsDocRow({ doc, subId }: { doc: AvsDoc; subId: string }) {
   const [, startTransition] = useTransition();
   const [validFrom, setValidFrom] = useState(doc.validFrom ?? "");
   const [validUntil, setValidUntil] = useState(doc.validUntil ?? "");
+  const [description, setDescription] = useState(doc.description ?? "");
   const [editing, setEditing] = useState(false);
-  const pencilRef = useRef<HTMLButtonElement>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const bothSet = !!doc.validFrom && !!doc.validUntil;
-  const showInputs = editing || !bothSet;
+  const showInputs = editing || !doc.validUntil;
 
-  function commit(from: string, until: string) {
+  function commit(from: string, until: string, desc: string) {
     startTransition(() =>
-      updateAvsDocumentDates(doc.id, subId, from || null, until || null)
+      updateAvsDocumentDates(doc.id, subId, from || null, until || null, desc || null)
     );
-    if (bothSet) setEditing(false);
+    if (until) setEditing(false);
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -63,8 +71,6 @@ function AvsDocRow({ doc, subId }: { doc: AvsDoc; subId: string }) {
   }
 
   function handleGroupBlur(e: React.FocusEvent<HTMLLIElement>) {
-    // Don't close if focus moved to the pencil button (it will toggle itself)
-    if (pencilRef.current !== null && e.relatedTarget === pencilRef.current) return;
     if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       formRef.current?.requestSubmit();
     }
@@ -72,13 +78,17 @@ function AvsDocRow({ doc, subId }: { doc: AvsDoc; subId: string }) {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    commit(validFrom, validUntil);
+    commit(validFrom, validUntil, description);
   }
 
+  const isArchived = !!doc.archivedAt;
+
   return (
-    <li className="flex items-center justify-between px-4 md:px-5 py-3 gap-4" onBlur={handleGroupBlur} onKeyDown={handleKeyDown}>
+    <li className={`flex items-start justify-between px-4 md:px-5 py-3 gap-4 ${isArchived ? "opacity-50" : ""}`} onBlur={handleGroupBlur} onKeyDown={handleKeyDown}>
       <div className="flex items-start gap-3 min-w-0">
-          {doc.validityStatus === "expired" ? (
+          {isArchived ? (
+            <Archive className="size-4 text-muted-foreground shrink-0 mt-0.5" />
+          ) : doc.validityStatus === "expired" ? (
             <XCircle className="size-4 text-destructive shrink-0 mt-0.5" />
           ) : doc.validityStatus === "expiring_soon" ? (
             <Clock className="size-4 text-yellow-500 shrink-0 mt-0.5" />
@@ -87,10 +97,21 @@ function AvsDocRow({ doc, subId }: { doc: AvsDoc; subId: string }) {
           ) : (
             <CircleDashed className="size-4 text-muted-foreground shrink-0 mt-0.5" />
           )}
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-1.5 min-w-0">
           <p className="text-sm font-medium">
-            {doc.validityStatus === "expired" ? "Expired" : doc.validityStatus === "expiring_soon" ? "Expiring soon" : doc.validityStatus === "valid" ? "Valid" : "No dates set"}
+            {isArchived ? "Archived" : doc.validityStatus === "expired" ? "Expired" : doc.validityStatus === "expiring_soon" ? "Expiring soon" : doc.validityStatus === "valid" ? "Valid" : "No dates set"}
           </p>
+          {showInputs ? (
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Description (optional)"
+              className="rounded border bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-ring w-full"
+            />
+          ) : doc.description ? (
+            <p className="text-xs text-muted-foreground break-words">{doc.description}</p>
+          ) : null}
           {showInputs ? (
             <form ref={formRef} onSubmit={handleSubmit} className="flex flex-wrap items-center gap-3">
               <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -116,40 +137,38 @@ function AvsDocRow({ doc, subId }: { doc: AvsDoc; subId: string }) {
             </form>
           ) : (
             <p className="text-xs text-muted-foreground">
-              {formatDate(doc.validFrom!)} – {formatDate(doc.validUntil!)}
+              {doc.validFrom ? `${formatDate(doc.validFrom)} – ${formatDate(doc.validUntil!)}` : `Until ${formatDate(doc.validUntil!)}`}
             </p>
           )}
         </div>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
-        <Button
-          variant="ghost"
-          size="icon"
-          className={`size-8 cursor-pointer ${doc.fileKey ? "text-muted-foreground hover:text-foreground" : "invisible"}`}
-          onClick={() => doc.fileKey && downloadDoc(doc.fileKey)}
-          tabIndex={doc.fileKey ? 0 : -1}
-        >
-          <Eye className="size-4" />
-        </Button>
-        <Button
-          ref={pencilRef}
-          variant="ghost"
-          size="icon"
-          className={`size-8 cursor-pointer ${!bothSet ? "invisible" : editing ? "text-foreground" : "text-muted-foreground hover:text-foreground"}`}
-          onClick={() => setEditing((v) => !v)}
-          tabIndex={bothSet ? 0 : -1}
-        >
-          <Pencil className="size-4" />
-        </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-8 text-muted-foreground hover:text-destructive cursor-pointer"
-          onClick={() => startTransition(() => deleteAvsDocument(doc.id, subId))}
-        >
-          <Trash2 className="size-4" />
-        </Button>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="size-8 shrink-0 text-muted-foreground hover:text-foreground cursor-pointer">
+            <MoreVertical className="size-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {doc.fileKey && (
+            <DropdownMenuItem className="cursor-pointer" onSelect={() => downloadDoc(doc.fileKey!)}>
+              <Eye className="size-4 mr-2" /> View document
+            </DropdownMenuItem>
+          )}
+          {doc.validUntil && (
+            <DropdownMenuItem className="cursor-pointer" onSelect={() => setEditing((v) => !v)}>
+              <Pencil className="size-4 mr-2" /> Edit
+            </DropdownMenuItem>
+          )}
+          {(doc.fileKey || doc.validUntil) && <DropdownMenuSeparator />}
+          <DropdownMenuItem className="cursor-pointer" onSelect={() => startTransition(() => toggleArchiveAvsDocument(doc.id, subId, !isArchived))}>
+            {isArchived ? <ArchiveRestore className="size-4 mr-2" /> : <Archive className="size-4 mr-2" />}
+            {isArchived ? "Unarchive" : "Archive"}
+          </DropdownMenuItem>
+          <DropdownMenuItem variant="destructive" className="cursor-pointer" onSelect={() => startTransition(() => deleteAvsDocument(doc.id, subId))}>
+            <Trash2 className="size-4 mr-2" /> Delete
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </li>
   );
 }
@@ -157,6 +176,7 @@ function AvsDocRow({ doc, subId }: { doc: AvsDoc; subId: string }) {
 function AddAvsDocDialog({ subId }: { subId: string }) {
   const [open, setOpen] = useState(false);
   const [avsFile, setAvsFile] = useState<File | null>(null);
+  const [description, setDescription] = useState("");
   const [validFrom, setValidFrom] = useState("");
   const [validUntil, setValidUntil] = useState("");
   const [isPending, startTransition] = useTransition();
@@ -164,6 +184,7 @@ function AddAvsDocDialog({ subId }: { subId: string }) {
 
   function reset() {
     setAvsFile(null);
+    setDescription("");
     setValidFrom("");
     setValidUntil("");
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -183,7 +204,7 @@ function AddAvsDocDialog({ subId }: { subId: string }) {
           fileKey = key;
         }
       }
-      await addAvsDocument(subId, fileKey, validFrom || undefined, validUntil || undefined);
+      await addAvsDocument(subId, fileKey, validFrom || undefined, validUntil || undefined, description || undefined);
       reset();
       setOpen(false);
     });
@@ -258,6 +279,18 @@ function AddAvsDocDialog({ subId }: { subId: string }) {
             )}
           </div>
 
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="avs-description">Description <span className="text-muted-foreground font-normal">(optional)</span></Label>
+            <input
+              id="avs-description"
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Renewed after audit"
+              className="rounded-md border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-ring"
+            />
+          </div>
+
           <Button type="submit" disabled={isPending || !avsFile} className="cursor-pointer">
             {isPending ? <Loader2 className="size-4 mr-2 animate-spin" /> : <Plus className="size-4 mr-2" />}
             {isPending ? "Adding…" : "Add document"}
@@ -269,20 +302,37 @@ function AddAvsDocDialog({ subId }: { subId: string }) {
 }
 
 export function AvsDocumentSection({ subId, docs }: { subId: string; docs: AvsDoc[] }) {
+  const [showArchived, setShowArchived] = useState(false);
+  const hasArchived = docs.some((d) => !!d.archivedAt);
+  const visible = showArchived ? docs : docs.filter((d) => !d.archivedAt);
+
   return (
     <section className="rounded-xl border bg-background">
       <div className="px-4 md:px-5 py-3 md:py-4 border-b flex items-center justify-between">
         <h2 className="font-semibold text-sm">AVS Documents</h2>
-        <AddAvsDocDialog subId={subId} />
+        <div className="flex flex-col items-end gap-2.5">
+          <AddAvsDocDialog subId={subId} />
+          {hasArchived && (
+            <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer hover:text-foreground">
+              <input
+                type="checkbox"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+                className="accent-primary cursor-pointer"
+              />
+              Show archived
+            </label>
+          )}
+        </div>
       </div>
 
-      {docs.length === 0 ? (
+      {visible.length === 0 ? (
         <p className="px-4 md:px-5 py-6 text-sm text-muted-foreground text-center">
           No AVS document uploaded yet.
         </p>
       ) : (
         <ul className="divide-y">
-          {docs.map((doc) => (
+          {visible.map((doc) => (
             <AvsDocRow key={doc.id} doc={doc} subId={subId} />
           ))}
         </ul>

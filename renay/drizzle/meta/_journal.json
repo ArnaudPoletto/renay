@@ -50,6 +50,20 @@
       "when": 1771196294709,
       "tag": "0006_sleepy_whistler",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1771277984238,
+      "tag": "0007_good_malcolm_colcord",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1771278802646,
+      "tag": "0008_remarkable_maestro",
+      "breakpoints": true
     }
   ]
 }

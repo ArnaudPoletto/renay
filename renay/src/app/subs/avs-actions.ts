@@ -30,6 +30,7 @@ export async function addAvsDocument(
   fileKey?: string,
   validFrom?: string,
   validUntil?: string,
+  description?: string,
 ): Promise<string> {
   const vf = validFrom ?? null;
   const vu = validUntil ?? null;
@@ -39,6 +40,7 @@ export async function addAvsDocument(
     .values({
       subcontractorId,
       fileKey: fileKey ?? null,
+      description: description ?? null,
       validFrom: vf,
       validUntil: vu,
       validityStatus: computeValidityStatus(vf, vu),
@@ -54,10 +56,11 @@ export async function updateAvsDocumentDates(
   subcontractorId: string,
   validFrom: string | null,
   validUntil: string | null,
+  description: string | null,
 ) {
   await db
     .update(avsDocument)
-    .set({ validFrom, validUntil, validityStatus: computeValidityStatus(validFrom, validUntil) })
+    .set({ validFrom, validUntil, validityStatus: computeValidityStatus(validFrom, validUntil), description })
     .where(eq(avsDocument.id, id));
 
   revalidatePath(`/subs/${subcontractorId}`);
@@ -81,6 +84,15 @@ export async function updateAvsDocumentFile(
   await db
     .update(avsDocument)
     .set({ fileKey: newFileKey })
+    .where(eq(avsDocument.id, id));
+
+  revalidatePath(`/subs/${subcontractorId}`);
+}
+
+export async function toggleArchiveAvsDocument(id: string, subcontractorId: string, archive: boolean) {
+  await db
+    .update(avsDocument)
+    .set({ archivedAt: archive ? new Date() : null })
     .where(eq(avsDocument.id, id));
 
   revalidatePath(`/subs/${subcontractorId}`);

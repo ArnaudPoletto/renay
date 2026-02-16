@@ -80,9 +80,11 @@ export const avsDocument = pgTable("avsDocument", {
     .notNull()
     .references(() => subcontractor.id, { onDelete: "cascade" }),
   fileKey: text("fileKey"),
+  description: text("description"),
   validFrom: date("validFrom"),
   validUntil: date("validUntil"),
   validityStatus: text("validityStatus"),
+  archivedAt: timestamp("archivedAt"),
   createdAt: timestamp("createdAt").notNull().defaultNow(),
 });
 

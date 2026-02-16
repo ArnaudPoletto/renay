@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { ChevronRight, Search, Trash2 } from "lucide-react";
+import { ChevronRight, Search, Trash2, Users } from "lucide-react";
 import Link from "next/link";
 import Fuse from "fuse.js";
 import { Input } from "@/components/ui/input";
@@ -32,7 +32,7 @@ export function SubsList({ subs }: { subs: Sub[] }) {
   return (
     <div className="rounded-xl border bg-background flex flex-col">
       <div className="flex items-center justify-between px-4 md:px-5 py-3 md:py-4 border-b">
-        <h2 className="font-semibold text-sm">Subs</h2>
+        <h2 className="font-semibold text-sm flex items-center gap-1.5"><Users className="size-3.5" /> Subs</h2>
         <div className="flex items-center gap-3">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
